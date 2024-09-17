@@ -8,7 +8,6 @@ Refer to [the Build Instructions](./BUILDING.md)
 ## Customization:
 
 - Refer to [Change Logs](./CHANGELOGS.md)
-- Refer to [Features](./FEATURES.md)
 
 ## Credits
 - Spencer: everything

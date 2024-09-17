@@ -264,6 +264,8 @@ class PlayState extends MusicBeatState
 	public var startCallback:Void->Void = null;
 	public var endCallback:Void->Void = null;
 
+	public static var isInPlayState:Bool = false;
+
 	override public function create()
 	{
 		//trace('Playback Rate: ' + playbackRate);
@@ -274,6 +276,8 @@ class PlayState extends MusicBeatState
 
 		// for lua
 		instance = this;
+
+		isInPlayState = true;
 
 		PauseSubState.songName = null; //Reset to default
 		playbackRate = ClientPrefs.getGameplaySetting('songspeed');
@@ -2449,6 +2453,7 @@ class PlayState extends MusicBeatState
 
 		var placement:Float = FlxG.width * 0.35;
 		var rating:FlxSprite = new FlxSprite();
+		var comboSpr:FlxSprite;
 		var score:Int = 350;
 
 		//tryna do MS based judgment due to popular demand
@@ -2494,9 +2499,10 @@ class PlayState extends MusicBeatState
 		rating.visible = (!ClientPrefs.data.hideHud && showRating);
 		rating.x += ClientPrefs.data.comboOffset[0];
 		rating.y -= ClientPrefs.data.comboOffset[1];
+		rating.scale.set(0.7 * 1.1, 0.7 * 1.1);
 		rating.antialiasing = antialias;
 
-		var comboSpr:FlxSprite = new FlxSprite().loadGraphic(Paths.image(uiPrefix + 'combo' + uiSuffix));
+		comboSpr = new FlxSprite().loadGraphic(Paths.image(uiPrefix + 'combo' + uiSuffix));
 		comboSpr.screenCenter();
 		comboSpr.x = placement;
 		comboSpr.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
@@ -2507,6 +2513,7 @@ class PlayState extends MusicBeatState
 		comboSpr.antialiasing = antialias;
 		comboSpr.y += 60;
 		comboSpr.velocity.x += FlxG.random.int(1, 10) * playbackRate;
+		comboSpr.scale.set(0.7 * 1.1, 0.7 * 1.1);
 		comboGroup.add(rating);
 
 		if (!PlayState.isPixelStage)
@@ -2543,10 +2550,13 @@ class PlayState extends MusicBeatState
 			numScore.screenCenter();
 			numScore.x = placement + (43 * daLoop) - 90 + ClientPrefs.data.comboOffset[2];
 			numScore.y += 80 - ClientPrefs.data.comboOffset[3];
+			numScore.scale.set(0.5, 0.5);
+			numScore.scale.x *= 1.25;
 
 			if (!PlayState.isPixelStage) numScore.setGraphicSize(Std.int(numScore.width * 0.5));
 			else numScore.setGraphicSize(Std.int(numScore.width * daPixelZoom));
 			numScore.updateHitbox();
+			numScore.scale.y *= 0.75;
 
 			numScore.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
 			numScore.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
@@ -2558,30 +2568,25 @@ class PlayState extends MusicBeatState
 			if(showComboNum)
 				comboGroup.add(numScore);
 
-			FlxTween.tween(numScore, {alpha: 0}, 0.2 / playbackRate, {
-				onComplete: function(tween:FlxTween)
-				{
-					numScore.destroy();
-				},
-				startDelay: Conductor.crochet * 0.002 / playbackRate
-			});
+			FlxTween.tween(numScore.scale, {x: 0.5, y: 0.5}, 0.2 / playbackRate, {ease: FlxEase.circOut});
+			FlxTween.tween(rating.scale, {x: 0.7, y: 0.7}, 0.1 / playbackRate, {ease: FlxEase.quadOut});
+			FlxTween.tween(comboSpr.scale, {x: 0.7, y: 0.7}, 0.1 / playbackRate, {ease: FlxEase.quadOut,  onComplete: function(tween:FlxTween){
+				FlxTween.tween(numScore, {alpha: 0}, 0.2 / playbackRate);
+				FlxTween.tween(rating, {alpha: 0}, 0.2 / playbackRate);
+				FlxTween.tween(comboSpr, {alpha: 0}, 0.2 / playbackRate, {
+					onComplete: function(tween:FlxTween)
+					{
+						comboSpr.destroy();
+						rating.destroy();
+						numScore.destroy();
+					}
+				});
+			}});
 
 			daLoop++;
 			if(numScore.x > xThing) xThing = numScore.x;
 		}
 		comboSpr.x = xThing + 50;
-		FlxTween.tween(rating, {alpha: 0}, 0.2 / playbackRate, {
-			startDelay: Conductor.crochet * 0.001 / playbackRate
-		});
-
-		FlxTween.tween(comboSpr, {alpha: 0}, 0.2 / playbackRate, {
-			onComplete: function(tween:FlxTween)
-			{
-				comboSpr.destroy();
-				rating.destroy();
-			},
-			startDelay: Conductor.crochet * 0.002 / playbackRate
-		});
 	}
 
 	public var strumsBlocked:Array<Bool> = [];
@@ -2878,6 +2883,12 @@ class PlayState extends MusicBeatState
 		if (songName != 'tutorial')
 			camZooming = true;
 
+		if(health >= 0.1){
+			var gainHealth:Bool = true; // prevent health gain, *if* sustains are treated as a singular note
+			if (guitarHeroSustains && note.isSustainNote) gainHealth = false;
+			if (gainHealth) health -= note.hitHealth * healthGain;
+		}
+
 		if(note.noteType == 'Hey!' && dad.animOffsets.exists('hey')) {
 			dad.playAnim('hey', true);
 			dad.specialAnim = true;
@@ -3044,6 +3055,7 @@ class PlayState extends MusicBeatState
 		Note.globalRgbShaders = [];
 		backend.NoteTypesConfig.clearNoteTypesData();
 		instance = null;
+		isInPlayState = false;
 		super.destroy();
 	}
 
