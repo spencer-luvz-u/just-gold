@@ -83,40 +83,71 @@ class MusicBeatState extends FlxUIState
 
 	private function updateSection():Void
 	{
-		if(stepsToDo < 1) stepsToDo = Math.round(getBeatsOnSection() * 4);
-		while(curStep >= stepsToDo)
-		{
-			curSection++;
-			var beats:Float = getBeatsOnSection();
-			stepsToDo += Math.round(beats * 4);
-			sectionHit();
+		if (PlayState.isInPlayState || ClientPrefs.getGameplaySetting("songspeed") != 1){
+			if(stepsToDo < 1) stepsToDo = Math.round(getBeatsOnSection() * 4 / ClientPrefs.getGameplaySetting("songspeed"));
+			while(curStep >= stepsToDo)
+			{
+				curSection++;
+				var beats:Float = getBeatsOnSection();
+				stepsToDo += Math.round(beats * 4 / ClientPrefs.getGameplaySetting("songspeed"));
+				sectionHit();
+			}
+		}else{
+			if(stepsToDo < 1) stepsToDo = Math.round(getBeatsOnSection() * 4);
+			while(curStep >= stepsToDo)
+			{
+				curSection++;
+				var beats:Float = getBeatsOnSection();
+				stepsToDo += Math.round(beats * 4);
+				sectionHit();
+			}
 		}
 	}
 
 	private function rollbackSection():Void
 	{
-		if(curStep < 0) return;
+		if (PlayState.isInPlayState || ClientPrefs.getGameplaySetting("songspeed") != 1){
+			if(curStep < 0) return;
 
-		var lastSection:Int = curSection;
-		curSection = 0;
-		stepsToDo = 0;
-		for (i in 0...PlayState.SONG.notes.length)
-		{
-			if (PlayState.SONG.notes[i] != null)
+			var lastSection:Int = curSection;
+			curSection = 0;
+			stepsToDo = 0;
+			for (i in 0...PlayState.SONG.notes.length)
 			{
-				stepsToDo += Math.round(getBeatsOnSection() * 4);
-				if(stepsToDo > curStep) break;
-				
-				curSection++;
+				if (PlayState.SONG.notes[i] != null)
+				{
+					stepsToDo += Math.round(getBeatsOnSection() * 4 / ClientPrefs.getGameplaySetting("songspeed"));
+					if(stepsToDo > curStep) break;
+					
+					curSection++;
+				}
 			}
-		}
+	
+			if(curSection > lastSection) sectionHit();
+		}else{
+			if(curStep < 0) return;
 
-		if(curSection > lastSection) sectionHit();
+			var lastSection:Int = curSection;
+			curSection = 0;
+			stepsToDo = 0;
+			for (i in 0...PlayState.SONG.notes.length)
+			{
+				if (PlayState.SONG.notes[i] != null)
+				{
+					stepsToDo += Math.round(getBeatsOnSection() * 4);
+					if(stepsToDo > curStep) break;
+					
+					curSection++;
+				}
+			}
+	
+			if(curSection > lastSection) sectionHit();
+		}
 	}
 
 	private function updateBeat():Void
 	{
-		if (PlayState.isInPlayState){
+		if (PlayState.isInPlayState || ClientPrefs.getGameplaySetting("songspeed") != 1){
 			curBeat = Math.floor(curStep / 4 / ClientPrefs.getGameplaySetting("songspeed"));
 			curDecBeat = curDecStep / 4 / ClientPrefs.getGameplaySetting("songspeed");
 		}else{
@@ -130,7 +161,7 @@ class MusicBeatState extends FlxUIState
 		var lastChange = Conductor.getBPMFromSeconds(Conductor.songPosition);
 
 		var shit = ((Conductor.songPosition - ClientPrefs.data.noteOffset) - lastChange.songTime) / lastChange.stepCrochet;
-		if (PlayState.isInPlayState){
+		if (PlayState.isInPlayState || ClientPrefs.getGameplaySetting("songspeed") != 1){
 			curDecStep = lastChange.stepTime + (shit / ClientPrefs.getGameplaySetting("songspeed"));
 			curStep = lastChange.stepTime + Math.floor(shit / ClientPrefs.getGameplaySetting("songspeed"));
 		}else{
